@@ -10,9 +10,9 @@ void print_arr(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y 
 struct model {
     int size_x;
     int size_y;
-    unsigned char lattice[(int)((size_x * size_y - 1) / 8)+1];
     double energy;
     double mag;
+    unsigned char lattice[];
 };
 
 
