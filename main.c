@@ -1,4 +1,9 @@
 #include <stdio.h>
+#include <math.h>
+
+#define mu_b 9.274E-21
+#define J 1.
+#define B 0
 
 
 int get(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1], int, int);
@@ -6,6 +11,13 @@ int get(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 
 void set(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1], int, int, int);
 
 void print_arr(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
+
+double energy(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
+
+int nn(int, int);
+
+double norm_mag(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
+
 
 struct model {
     int size_x;
@@ -38,27 +50,48 @@ void set(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) /
 
 
 void print_arr(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
-//    for (int i = 0; i < size_y * 8; i++) {
-//        if (i%8 == 0) {
-//            printf("\n");
-//        }
-//        printf("%i ", (arr[(int)(i/8)] & (1 << (7-(i%8))) ? 1 : 0));
-//    }
-//    printf("\n");
-//
-//    for (int i = 0; i < size_y * size_x; i++) {
-//        if (i%size_x == 0) {
-//            printf("\n");
-//        }
-//        printf("%i ", (arr[(int)(i/8)] & (1 << (7-(i%8))) ? 1 : 0));
-//    }
-//    printf("\n");
-//    printf("\n");
-
     for (int i = 0; i < size_y; i++) {
         for (int j = 0; j < size_x; j++) {
             printf("%i ", get(size_x, size_y, arr, j+1, i+1));
         }
         printf("\n");
     }
+}
+
+
+double energy(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
+    double E = 0;
+    for (int i = 0; i < size_x * size_y; i++) {
+
+        int i_x = i % size_x + 1;
+        int i_y = (int)(i / size_x) + 1;
+
+        for (int dx = -1; dx < 2; dx++) {  // faster to test 3 cases in an O(n^2) rather than large N number in O(n)
+            for (int dy = -1; dy < 2; dy++) {
+
+                int j_x = ((size_x + i_x - 1 + dx) % size_x) + 1;  // ensures correct coordinate with periodic boundaries
+                int j_y = ((size_y + i_y - 1 + dy) % size_y) + 1;
+
+                E -= J / 2 * nn(dx, dy) * (get(size_x, size_y, arr, i_x, i_y) - .5) * (get(size_x, size_y, arr, j_x, j_y) - .5);
+            }
+        }
+        E -= mu_b * B * (get(size_x, size_y, arr, i_x, i_y)-.5);
+    }
+    return E;
+}
+
+
+int nn(int dx, int dy) {
+    return abs(dx) + abs(dy) == 1 ? 1 : 0;
+}
+
+
+double norm_mag(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
+    double M = 0;
+    for (int i = 0; i < size_x * size_y; i++) {
+        int i_x = i % size_x + 1;
+        int i_y = (int)(i / size_x) + 1;
+        M += 2 * (get(size_x, size_y, arr, i_x, i_y)-.5) / (size_x * size_y);
+    }
+    return M;
 }
