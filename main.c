@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define mu_b 9.274E-21
 #define J 1.
@@ -18,19 +20,25 @@ int nn(int, int);
 
 double norm_mag(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
 
+void randomise(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
 
-struct model {
+
+typedef struct model {
     int size_x;
     int size_y;
     double energy;
     double mag;
     unsigned char lattice[];
-};
+} Model;
 
 
-// basically a 1 bit int
 int main() {
-
+    int size_x = 10;
+    int size_y = 10;
+    unsigned char *arr;
+    arr = (unsigned char*) calloc(size_x * size_y / sizeof(unsigned char), size_x * size_y);
+    randomise(size_x, size_y, arr);
+    print_arr(size_x, size_y, arr);
     return 0;
 }
 
@@ -94,4 +102,17 @@ double norm_mag(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y
         M += 2 * (get(size_x, size_y, arr, i_x, i_y)-.5) / (size_x * size_y);
     }
     return M;
+}
+
+
+void randomise(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
+    srand(time(NULL));
+    for (int i = 0; i < size_x * size_y; i++) {
+        int x = i % 8 + 1;
+        int y = (int)(i / 8) + 1;
+        int bit = rand() % 2;
+        if (bit) {
+            set(size_x, size_y, arr, x, y, bit);
+        }
+    }
 }
