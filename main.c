@@ -6,21 +6,8 @@
 #define mu_b 9.274E-21
 #define J 1.
 #define B 0
-
-
-int get(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1], int, int);
-
-void set(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1], int, int, int);
-
-void print_arr(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
-
-double energy(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
-
-int nn(int, int);
-
-double norm_mag(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
-
-void randomise(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]);
+#define T 0.5
+#define k_b 1.380649E-23
 
 
 typedef struct model {
@@ -28,91 +15,146 @@ typedef struct model {
     int size_y;
     double energy;
     double mag;
-    unsigned char lattice[];
+    unsigned char *lattice;
 } Model;
 
 
+int get(Model, int, int);
+
+void set(Model, int, int, int);
+
+void print_arr(Model);
+
+double energy(Model);
+
+int nn(int, int);
+
+double norm_mag(Model);
+
+void randomise(Model);
+
+void evolve(Model);
+
+
 int main() {
-    int size_x = 10;
-    int size_y = 10;
-    unsigned char *arr;
-    arr = (unsigned char*) calloc(size_x * size_y / sizeof(unsigned char), size_x * size_y);
-    randomise(size_x, size_y, arr);
-    print_arr(size_x, size_y, arr);
+    Model model = {100, 100};
+    model.lattice = (unsigned char*) calloc(model.size_x * model.size_y / sizeof(unsigned char), model.size_x * model.size_y);
+    randomise(model);
+    model.energy = energy(model);
+    model.mag = norm_mag(model);
+    //print_arr(model);
+    printf("E = %g, M = %g\n", model.energy, norm_mag(model));
+    evolve(model);
+    //print_arr(model);
+    printf("E = %g, M = %g\n", model.energy, norm_mag(model));
     return 0;
 }
 
 
-int get(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1], int x, int y) {  // fml i hate this shit
-    int byte = (int)(((y-1) * size_x + x-1) / 8);
-    int bit_shift = 7 - (((y-1) * size_x + x-1) % 8);
-    return (arr[byte] & (1 << bit_shift)) ? 1 : 0;
+int get(Model model, int x, int y) {  // fml i hate this shit
+    int byte = (int)(((y-1) * model.size_x + x-1) / 8);
+    int bit_shift = 7 - (((y-1) * model.size_x + x-1) % 8);
+    return (model.lattice[byte] & (1 << bit_shift)) ? 1 : 0;
 }
 
 
-void set(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1], int x, int y, int bit) {
-    int byte = (int)(((y-1) * size_x + x-1) / 8);
-    int bit_shift = 7 - (((y-1) * size_x + x-1) % 8);
-    arr[byte] ^= (-bit ^ arr[byte]) & (1 << bit_shift);
+void set(Model model, int x, int y, int bit) {
+    int byte = (int)(((y-1) * model.size_x + x-1) / 8);
+    int bit_shift = 7 - (((y-1) * model.size_x + x-1) % 8);
+    model.lattice[byte] ^= (-bit ^ model.lattice[byte]) & (1 << bit_shift);
 }
 
 
-void print_arr(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
-    for (int i = 0; i < size_y; i++) {
-        for (int j = 0; j < size_x; j++) {
-            printf("%i ", get(size_x, size_y, arr, j+1, i+1));
+void print_arr(Model model) {
+    for (int i = 0; i < model.size_y; i++) {  // double for loop not necessary but oh well
+        for (int j = 0; j < model.size_x; j++) {
+            printf("%i ", get(model, j+1, i+1));
         }
         printf("\n");
     }
 }
 
 
-double energy(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
+double energy(Model model) {
     double E = 0;
-    for (int i = 0; i < size_x * size_y; i++) {
+    for (int i = 0; i < model.size_x * model.size_y; i++) {
 
-        int i_x = i % size_x + 1;
-        int i_y = (int)(i / size_x) + 1;
+        int i_x = i % model.size_x + 1;
+        int i_y = (int)(i / model.size_x) + 1;
 
         for (int dx = -1; dx < 2; dx++) {  // faster to test 3 cases in an O(n^2) rather than large N number in O(n)
             for (int dy = -1; dy < 2; dy++) {
 
-                int j_x = ((size_x + i_x - 1 + dx) % size_x) + 1;  // ensures correct coordinate with periodic boundaries
-                int j_y = ((size_y + i_y - 1 + dy) % size_y) + 1;
+                int j_x = ((model.size_x + i_x - 1 + dx) % model.size_x) + 1;  // ensures correct coordinate with periodic boundaries
+                int j_y = ((model.size_y + i_y - 1 + dy) % model.size_y) + 1;
 
-                E -= J / 2 * nn(dx, dy) * (get(size_x, size_y, arr, i_x, i_y) - .5) * (get(size_x, size_y, arr, j_x, j_y) - .5);
+                E -= (J / 2) * nn(dx, dy) * (get(model, i_x, i_y) - .5) * (get(model, j_x, j_y) - .5);
             }
         }
-        E -= mu_b * B * (get(size_x, size_y, arr, i_x, i_y)-.5);
+        E -= mu_b * B * (get(model, i_x, i_y)-.5);
     }
     return E;
 }
 
 
-int nn(int dx, int dy) {
+int nn(int dx, int dy) {  // really not that necessary as a function but looks cleaner ig
     return abs(dx) + abs(dy) == 1 ? 1 : 0;
 }
 
 
-double norm_mag(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
+double norm_mag(Model model) {
     double M = 0;
-    for (int i = 0; i < size_x * size_y; i++) {
-        int i_x = i % size_x + 1;
-        int i_y = (int)(i / size_x) + 1;
-        M += 2 * (get(size_x, size_y, arr, i_x, i_y)-.5) / (size_x * size_y);
+    for (int i = 0; i < model.size_x * model.size_y; i++) {
+        int i_x = i % model.size_x + 1;
+        int i_y = (int)(i / model.size_x) + 1;
+        M += 2 * (get(model, i_x, i_y)-.5) / (model.size_x * model.size_y);
     }
     return M;
 }
 
 
-void randomise(int size_x, int size_y, unsigned char arr[(int)((size_x * size_y - 1) / 8)+1]) {
+void randomise(Model model) {
     srand(time(NULL));
-    for (int i = 0; i < size_x * size_y; i++) {
-        int x = i % 8 + 1;
-        int y = (int)(i / 8) + 1;
+    for (int i = 0; i < model.size_x * model.size_y; i++) {
+        int x = i % model.size_x + 1;
+        int y = (int)(i / model.size_x) + 1;
         int bit = rand() % 2;
         if (bit) {
-            set(size_x, size_y, arr, x, y, bit);
+            set(model, x, y, bit);
         }
     }
+}
+
+
+void evolve(Model model) {
+    int running = 1;
+    int step = 0;
+    while (running) {
+        step++;
+        double init_energy = model.energy;
+        for (int i = 0; i < model.size_x * model.size_y; i++) {
+            if (rand()%2) {
+                int x = i % model.size_x + 1;
+                int y = (int) (i / model.size_x) + 1;
+                int bit_flip = get(model, x, y);
+                set(model, x, y, bit_flip ? 0 : 1);
+                double delta_E = model.energy - energy(model);
+                if (delta_E > 0 && (rand() % 10000) / 10000 > exp(-delta_E / (k_b * T))) { // set back to original
+                    set(model, x, y, bit_flip);
+                } else {
+                    model.energy = energy(model);
+                }
+            }
+        }
+
+        double new_energy = energy(model);
+        if (new_energy == init_energy) {
+            running = 0;
+        }
+        else {
+            model.energy = new_energy;
+            init_energy = new_energy;
+        }
+    }
+    printf("Steps taken: %i\n", step);
 }
