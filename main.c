@@ -7,7 +7,8 @@
 #define J 1.
 #define B 0
 #define T 0.5
-#define k_b 1.380649E-23
+//#define k_b 1.380649E-23
+#define k_b 1.
 
 
 typedef struct model {
@@ -37,8 +38,8 @@ void evolve(Model);
 
 
 int main() {
-    Model model = {100, 100};
-    model.lattice = (unsigned char*) calloc(model.size_x * model.size_y / sizeof(unsigned char), model.size_x * model.size_y);
+    Model model = {1000000, 1000000};
+    model.lattice = (unsigned char*) calloc(((int) model.size_x * model.size_y / sizeof(unsigned char)) + 1, sizeof(unsigned char));
     randomise(model);
     model.energy = energy(model);
     model.mag = norm_mag(model);
@@ -132,19 +133,17 @@ void evolve(Model model) {
     while (running) {
         step++;
         double init_energy = model.energy;
-        for (int i = 0; i < model.size_x * model.size_y; i++) {
-            if (rand()%2) {
-                int x = i % model.size_x + 1;
-                int y = (int) (i / model.size_x) + 1;
-                int bit_flip = get(model, x, y);
-                set(model, x, y, bit_flip ? 0 : 1);
-                double delta_E = model.energy - energy(model);
-                if (delta_E > 0 && (rand() % 10000) / 10000 > exp(-delta_E / (k_b * T))) { // set back to original
-                    set(model, x, y, bit_flip);
-                } else {
-                    model.energy = energy(model);
-                }
-            }
+
+        int x = rand() % model.size_x + 1;
+        int y = rand() % model.size_y + 1;
+        int bit_flip = get(model, x, y);
+        set(model, x, y, bit_flip ? 0 : 1);
+        double current_E = energy(model);
+        double delta_E = current_E - model.energy;
+        if (delta_E > 0 && (float)(rand() % 100000) / 100000 > exp(-delta_E / (k_b * T))) { // set back to original
+            set(model, x, y, bit_flip);
+        } else {
+            model.energy = current_E;
         }
 
         double new_energy = energy(model);
@@ -153,7 +152,9 @@ void evolve(Model model) {
         }
         else {
             model.energy = new_energy;
-            init_energy = new_energy;
+        }
+        if (!step%100) {
+            printf("steps: %i\n", step);
         }
     }
     printf("Steps taken: %i\n", step);
