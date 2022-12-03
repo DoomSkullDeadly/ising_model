@@ -39,7 +39,7 @@ include CMakeFiles/rules.ninja
 #############################################
 # Logical path to working directory; prefix for absolute paths.
 
-cmake_ninja_workdir = F$:/Uni$ Programming/Final$ Project$ -$ Ising$ Model/cmake-build-debug/
+cmake_ninja_workdir = F$:/Uni$ Programming/small$ ints/cmake-build-debug/
 # =============================================================================
 # Object build statements for EXECUTABLE target small_ints
 
@@ -49,7 +49,7 @@ cmake_ninja_workdir = F$:/Uni$ Programming/Final$ Project$ -$ Ising$ Model/cmake
 
 build cmake_object_order_depends_target_small_ints: phony || CMakeFiles/small_ints.dir
 
-build CMakeFiles/small_ints.dir/main.c.obj: C_COMPILER__small_ints_Debug F$:/Uni$ Programming/Final$ Project$ -$ Ising$ Model/main.c || cmake_object_order_depends_target_small_ints
+build CMakeFiles/small_ints.dir/main.c.obj: C_COMPILER__small_ints_Debug F$:/Uni$ Programming/small$ ints/main.c || cmake_object_order_depends_target_small_ints
   DEP_FILE = CMakeFiles\small_ints.dir\main.c.obj.d
   FLAGS = -g -std=gnu99
   OBJECT_DIR = CMakeFiles\small_ints.dir
@@ -81,7 +81,7 @@ build small_ints.exe: C_EXECUTABLE_LINKER__small_ints_Debug CMakeFiles/small_int
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cmd.exe /C "cd /D "F:\Uni Programming\Final Project - Ising Model\cmake-build-debug" && "F:\Programming\Jetbrains\CLion 2021.3.3\bin\cmake\win\bin\cmake.exe" -E echo "No interactive CMake dialog available.""
+  COMMAND = cmd.exe /C "cd /D "F:\Uni Programming\small ints\cmake-build-debug" && "F:\Programming\Jetbrains\CLion 2021.3.3\bin\cmake\win\bin\cmake.exe" -E echo "No interactive CMake dialog available.""
   DESC = No interactive CMake dialog available...
   restat = 1
 
@@ -92,7 +92,7 @@ build edit_cache: phony CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cmd.exe /C "cd /D "F:\Uni Programming\Final Project - Ising Model\cmake-build-debug" && "F:\Programming\Jetbrains\CLion 2021.3.3\bin\cmake\win\bin\cmake.exe" --regenerate-during-build -S"F:\Uni Programming\Final Project - Ising Model" -B"F:\Uni Programming\Final Project - Ising Model\cmake-build-debug""
+  COMMAND = cmd.exe /C "cd /D "F:\Uni Programming\small ints\cmake-build-debug" && "F:\Programming\Jetbrains\CLion 2021.3.3\bin\cmake\win\bin\cmake.exe" --regenerate-during-build -S"F:\Uni Programming\small ints" -B"F:\Uni Programming\small ints\cmake-build-debug""
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -110,7 +110,7 @@ build small_ints: phony small_ints.exe
 # =============================================================================
 
 #############################################
-# Folder: F:/Uni Programming/Final Project - Ising Model/cmake-build-debug
+# Folder: F:/Uni Programming/small ints/cmake-build-debug
 
 build all: phony small_ints.exe
 

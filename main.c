@@ -38,15 +38,21 @@ void evolve(Model);
 
 
 int main() {
-    Model model = {1000000, 1000000};
+    Model model = {50, 10};
     model.lattice = (unsigned char*) calloc(((int) model.size_x * model.size_y / sizeof(unsigned char)) + 1, sizeof(unsigned char));
+    if (model.lattice == NULL) {
+        printf("Error occured!\n");
+        exit(0);
+    }
     randomise(model);
     model.energy = energy(model);
     model.mag = norm_mag(model);
     //print_arr(model);
     printf("E = %g, M = %g\n", model.energy, norm_mag(model));
     evolve(model);
-    //print_arr(model);
+    print_arr(model);
+    model.energy = energy(model);
+    model.mag = norm_mag(model);
     printf("E = %g, M = %g\n", model.energy, norm_mag(model));
     return 0;
 }
@@ -115,12 +121,13 @@ double norm_mag(Model model) {
 
 
 void randomise(Model model) {
+    printf("Randomising\n");
     srand(time(NULL));
     for (int i = 0; i < model.size_x * model.size_y; i++) {
-        int x = i % model.size_x + 1;
-        int y = (int)(i / model.size_x) + 1;
         int bit = rand() % 2;
         if (bit) {
+            int x = i % model.size_x + 1;
+            int y = (int)(i / model.size_x) + 1;
             set(model, x, y, bit);
         }
     }
@@ -140,21 +147,20 @@ void evolve(Model model) {
         set(model, x, y, bit_flip ? 0 : 1);
         double current_E = energy(model);
         double delta_E = current_E - model.energy;
+
         if (delta_E > 0 && (float)(rand() % 100000) / 100000 > exp(-delta_E / (k_b * T))) { // set back to original
             set(model, x, y, bit_flip);
-        } else {
+        }
+        else {
             model.energy = current_E;
         }
 
-        double new_energy = energy(model);
-        if (new_energy == init_energy) {
+        double new_E = energy(model);
+        if (step == 1000) {  // evolve with varying steps and see where it converges, turn this into a for loop lmao
             running = 0;
         }
         else {
-            model.energy = new_energy;
-        }
-        if (!step%100) {
-            printf("steps: %i\n", step);
+            model.energy = new_E;
         }
     }
     printf("Steps taken: %i\n", step);
