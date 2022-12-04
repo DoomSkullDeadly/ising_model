@@ -16,6 +16,8 @@ typedef struct model {
     int size_y;
     double energy;
     double mag;
+    int evolve_steps;
+    int step;
     unsigned char *lattice;
 } Model;
 
@@ -36,24 +38,30 @@ void randomise(Model);
 
 void evolve(Model);
 
+void output(Model);
+
+void video();
+
 
 int main() {
-    Model model = {50, 10};
+    Model model = {100, 100};
     model.lattice = (unsigned char*) calloc(((int) model.size_x * model.size_y / sizeof(unsigned char)) + 1, sizeof(unsigned char));
     if (model.lattice == NULL) {
         printf("Error occured!\n");
         exit(0);
     }
+    model.evolve_steps = 5000;
     randomise(model);
     model.energy = energy(model);
     model.mag = norm_mag(model);
     //print_arr(model);
-    printf("E = %g, M = %g\n", model.energy, norm_mag(model));
+    printf("E = %g, M = %g\n", model.energy, model.mag);
     evolve(model);
-    print_arr(model);
+    //print_arr(model);
     model.energy = energy(model);
     model.mag = norm_mag(model);
-    printf("E = %g, M = %g\n", model.energy, norm_mag(model));
+    printf("E = %g, M = %g\n", model.energy, model.mag);
+    video();
     return 0;
 }
 
@@ -136,9 +144,9 @@ void randomise(Model model) {
 
 void evolve(Model model) {
     int running = 1;
-    int step = 0;
+    output(model);
     while (running) {
-        step++;
+        model.step++;
         double init_energy = model.energy;
 
         int x = rand() % model.size_x + 1;
@@ -156,12 +164,35 @@ void evolve(Model model) {
         }
 
         double new_E = energy(model);
-        if (step == 1000) {  // evolve with varying steps and see where it converges, turn this into a for loop lmao
+        if (model.step == model.evolve_steps) {  // evolve with varying steps and see where it converges, turn this into a for loop lmao
             running = 0;
         }
         else {
             model.energy = new_E;
         }
+
+        output(model);
     }
-    printf("Steps taken: %i\n", step);
+    printf("Steps taken: %i\n", model.step);
+}
+
+
+void output(Model model) {
+    FILE *file;
+    char buf[12+(int)(model.step/10)];
+    sprintf(buf, "output/%i.txt", model.step);
+    file = fopen(buf, "w");
+
+    for (int i = 0; i < model.size_y; i++) {  // double for loop not necessary but oh well
+        for (int j = 0; j < model.size_x; j++) {
+            fprintf(file, "%i ", get(model, j+1, i+1));
+        }
+        fprintf(file, "\n");
+    }
+    fclose(file);
+}
+
+
+void video() {
+    system("python ../video.py");
 }
