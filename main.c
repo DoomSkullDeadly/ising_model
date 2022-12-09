@@ -42,6 +42,8 @@ void output(Model);
 
 void video();
 
+void from_file(Model, int);
+
 
 int main() {
     Model model = {50, 50};
@@ -50,8 +52,9 @@ int main() {
         printf("Error occured!\n");
         exit(0);
     }
-    model.evolve_steps = 100;
-    randomise(model);
+    model.evolve_steps = 250;
+    //randomise(model);
+    from_file(model, 113);
     model.energy = energy(model);
     model.mag = norm_mag(model);
     //print_arr(model);
@@ -154,14 +157,14 @@ void evolve(Model model) {
             double current_E = energy(model);
             double delta_E = current_E - model.energy;
 
-            if (delta_E > 0 &&
-                (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * T))) { // set back to original
+            if (delta_E > 0 && (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * T))) { // set back to original
                 set(model, x, y, bit_flip);
-            } else {
+            }
+            else {
                 model.energy = current_E;
             }
         }
-
+        double new_E = energy(model);
         if (model.step ==
             model.evolve_steps) {  // evolve with varying steps and see where it converges, turn this into a for loop lmao
             running = 0;
@@ -190,5 +193,23 @@ void output(Model model) {
 
 
 void video() {
-    system("C:/Users/Student/AppData/Local/Programs/Python/Python39/python.exe ../video.py");
+    system("python ../video.py");
+}
+
+
+void from_file(Model model, int num) {
+    FILE *file;
+    char buf[12+(int)(num/10)];
+    sprintf(buf, "output/%i.txt", num);
+    file = fopen(buf, "r");
+
+    int bit;
+    for (int i = 0; i < model.size_y; i++) {
+        for (int j = 0; j < model.size_x; j++) {
+            fscanf(file, "%i ", &i);
+            set(model, j, i, bit);
+        }
+    }
+    fclose(file);
+    model.step = num;
 }
