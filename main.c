@@ -6,7 +6,7 @@
 #define mu_b 9.274E-21
 #define J 1.
 #define B 1.2
-#define T 0.5
+#define T 0.69
 #define k_b 1.380649E-23
 //#define k_b 1.
 
@@ -44,13 +44,13 @@ void video();
 
 
 int main() {
-    Model model = {100, 100};
-    model.lattice = (unsigned char*) calloc(((int) model.size_x * model.size_y / sizeof(unsigned char)) + 1, sizeof(unsigned char));
+    Model model = {50, 50};
+    model.lattice = (unsigned char*) calloc((int) (model.size_x * model.size_y / sizeof(unsigned char)) + 1, sizeof(unsigned char));
     if (model.lattice == NULL) {
         printf("Error occured!\n");
         exit(0);
     }
-    model.evolve_steps = 1000;
+    model.evolve_steps = 100;
     randomise(model);
     model.energy = energy(model);
     model.mag = norm_mag(model);
@@ -129,48 +129,42 @@ double norm_mag(Model model) {
 
 
 void randomise(Model model) {
-    printf("Randomising\n");
+    printf("Randomising...\n");
     srand(time(NULL));
-    for (int i = 0; i < model.size_x * model.size_y; i++) {
-        int bit = rand() % 2;
-        if (bit) {
-            int x = i % model.size_x + 1;
-            int y = (int)(i / model.size_x) + 1;
-            set(model, x, y, bit);
-        }
+    int size = (int) (model.size_x * model.size_y / sizeof(unsigned char)) + 1;
+    for (int i = 0; i < size; i++) {
+        model.lattice[i] = (char)rand() % 128;
     }
+    printf("Randomised!\n");
 }
 
 
 void evolve(Model model) {
     int running = 1;
+    srand(time(NULL));
     output(model);
     while (running) {
         model.step++;
-        for (int x = 0; x < model.size_x; x++) {
-            x += 1;
-            double init_energy = model.energy;
-
+        for (int i = 0; i < model.size_x * model.size_y; i++) {
+            int x = rand() % model.size_x + 1;
             int y = rand() % model.size_y + 1;
             int bit_flip = get(model, x, y);
             set(model, x, y, bit_flip ? 0 : 1);
+
             double current_E = energy(model);
             double delta_E = current_E - model.energy;
 
-            if (delta_E > 0 && (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * T))) { // set back to original
+            if (delta_E > 0 &&
+                (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * T))) { // set back to original
                 set(model, x, y, bit_flip);
-            }
-            else {
+            } else {
                 model.energy = current_E;
             }
         }
-        double new_E = energy(model);
+
         if (model.step ==
             model.evolve_steps) {  // evolve with varying steps and see where it converges, turn this into a for loop lmao
             running = 0;
-        }
-        else {
-            model.energy = new_E;
         }
 
         output(model);
@@ -196,5 +190,5 @@ void output(Model model) {
 
 
 void video() {
-    system("python ../video.py");
+    system("C:/Users/Student/AppData/Local/Programs/Python/Python39/python.exe ../video.py");
 }
