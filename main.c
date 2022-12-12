@@ -6,18 +6,19 @@
 #define mu_b 9.274E-21
 #define J 1.
 #define B 1.2
-#define T 0.69
 #define k_b 1.380649E-23
 //#define k_b 1.
 
 
-typedef struct model {
+typedef struct {
     int size_x;
     int size_y;
     double energy;
     double mag;
     int evolve_steps;
     int step;
+    int delta_checks;
+    double T;
     unsigned char *lattice;
 } Model;
 
@@ -42,7 +43,11 @@ void output(Model);
 
 void video();
 
-void from_file(Model, int);
+void from_file(Model*, int);
+
+void M_as_T(Model*, double, double, double);
+
+void set_evolve(Model*);
 
 
 int main() {
@@ -52,19 +57,12 @@ int main() {
         printf("Error occured!\n");
         exit(0);
     }
-    model.evolve_steps = 250;
-    //randomise(model);
-    from_file(model, 113);
-    model.energy = energy(model);
-    model.mag = norm_mag(model);
-    //print_arr(model);
-    printf("E = %g, M = %g\n", model.energy, model.mag);
-    evolve(model);
-    //print_arr(model);
-    model.energy = energy(model);
-    model.mag = norm_mag(model);
-    printf("E = %g, M = %g\n", model.energy, model.mag);
-    video();
+    model.evolve_steps = 0;
+    model.delta_checks = 20;
+    model.T = 1.5;
+//    set_evolve(&model);
+    M_as_T(&model, 0.5, 2.5, 0.1);
+//    video();
     return 0;
 }
 
@@ -143,9 +141,11 @@ void randomise(Model model) {
 
 
 void evolve(Model model) {
+    printf("T: %gK\n", model.T);
     int running = 1;
     srand(time(NULL));
     output(model);
+    double d_E[model.delta_checks];
     while (running) {
         model.step++;
         for (int i = 0; i < model.size_x * model.size_y; i++) {
@@ -157,19 +157,24 @@ void evolve(Model model) {
             double current_E = energy(model);
             double delta_E = current_E - model.energy;
 
-            if (delta_E > 0 && (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * T))) { // set back to original
+            if (delta_E > 0 && (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * model.T))) { // set back to original
                 set(model, x, y, bit_flip);
             }
             else {
                 model.energy = current_E;
             }
         }
-        double new_E = energy(model);
+
         if (model.step ==
-            model.evolve_steps) {  // evolve with varying steps and see where it converges, turn this into a for loop lmao
+            model.evolve_steps && model.evolve_steps) {
             running = 0;
         }
-
+        else if (!model.evolve_steps) {
+            d_E[model.step % model.delta_checks] = model.energy; // current pos
+            if (fabs(d_E[(model.step+1) % model.delta_checks] - model.energy) < fabs(model.energy * 0.001)) {
+                running = 0;
+            }
+        }
         output(model);
     }
     printf("Steps taken: %i\n", model.step);
@@ -197,19 +202,58 @@ void video() {
 }
 
 
-void from_file(Model model, int num) {
+void from_file(Model *model, int num) {
     FILE *file;
     char buf[12+(int)(num/10)];
     sprintf(buf, "output/%i.txt", num);
     file = fopen(buf, "r");
 
     int bit;
-    for (int i = 0; i < model.size_y; i++) {
-        for (int j = 0; j < model.size_x; j++) {
-            fscanf(file, "%i ", &i);
-            set(model, j, i, bit);
+    for (int i = 0; i < model->size_y; i++) {
+        for (int j = 0; j < model->size_x; j++) {
+            fscanf(file, "%i ", &bit);
+            if (bit) {
+                set(*model, j+1, i+1, bit);
+            }
         }
     }
     fclose(file);
-    model.step = num;
+    model->step = num;
+}
+
+
+void M_as_T(Model *model, double lower, double upper, double increment) {
+    model->T = lower;
+    int steps = (int)((upper - lower) / increment);
+    double mags[steps];
+
+    for (int i = 0; i <= steps; ++i) {
+        randomise(*model);
+        evolve(*model);
+        mags[i] = norm_mag(*model);
+        model->T += increment;
+    }
+
+    FILE *file;
+    file = fopen("mags.txt", "w");
+    fprintf(file, "T\tM\n");
+    for (int i = 0; i <= steps; ++i) {
+        fprintf(file, "%g\t%g\n", lower+(i*increment), mags[i]);
+    }
+    fclose(file);
+}
+
+
+void set_evolve(Model *model) {
+    randomise(*model);
+//    from_file(&model, 300);
+    model->energy = energy(*model);
+    model->mag = norm_mag(*model);
+    print_arr(*model);
+    printf("E = %g, M = %g\n", model->energy, model->mag);
+    evolve(*model);
+    print_arr(*model);
+    model->energy = energy(*model);
+    model->mag = norm_mag(*model);
+    printf("E = %g, M = %g\n", model->energy, model->mag);
 }

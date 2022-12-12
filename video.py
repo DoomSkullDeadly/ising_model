@@ -18,7 +18,7 @@ def animate(i):
     return plt.imshow(img, cmap='hot', animated=True),
 
 
-ani = animation.FuncAnimation(fig, animate, frames=len(files), interval=16.666, blit=True)
-writervideo = animation.FFMpegWriter(fps=60)
+ani = animation.FuncAnimation(fig, animate, frames=len(files), interval=33.333333, blit=True)
+writervideo = animation.FFMpegWriter(fps=30)
 ani.save("../test.mp4", writer=writervideo)
 plt.close()
