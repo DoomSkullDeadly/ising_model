@@ -3,11 +3,12 @@
 #include <math.h>
 #include <time.h>
 
-#define mu_b 9.274E-21
+//#define mu_b 9.274E-21
+#define mu_b 1.
 #define J 1.
-#define B 1.2
-#define k_b 1.380649E-23
-//#define k_b 1.
+#define B 0.
+//#define k_b 1.380649E-23
+#define k_b 1.
 
 
 typedef struct {
@@ -51,7 +52,7 @@ void set_evolve(Model*);
 
 
 int main() {
-    Model model = {50, 50};
+    Model model = {10, 10};
     model.lattice = (unsigned char*) calloc((int) (model.size_x * model.size_y / sizeof(unsigned char)) + 1, sizeof(unsigned char));
     if (model.lattice == NULL) {
         printf("Error occured!\n");
@@ -61,7 +62,7 @@ int main() {
     model.delta_checks = 20;
     model.T = 1.5;
 //    set_evolve(&model);
-    M_as_T(&model, 0.5, 2.5, 0.1);
+    M_as_T(&model, 0.5, 2.5, 0.01);
 //    video();
     return 0;
 }
@@ -130,18 +131,18 @@ double norm_mag(Model model) {
 
 
 void randomise(Model model) {
-    printf("Randomising...\n");
+//    printf("Randomising...\n");
     srand(time(NULL));
     int size = (int) (model.size_x * model.size_y / sizeof(unsigned char)) + 1;
     for (int i = 0; i < size; i++) {
         model.lattice[i] = (char)rand() % 128;
     }
-    printf("Randomised!\n");
+//    printf("Randomised!\n");
 }
 
 
 void evolve(Model model) {
-    printf("T: %gK\n", model.T);
+//    printf("T: %gK\n", model.T);
     int running = 1;
     srand(time(NULL));
     output(model);
@@ -175,9 +176,9 @@ void evolve(Model model) {
                 running = 0;
             }
         }
-        output(model);
+//        output(model);
     }
-    printf("Steps taken: %i\n", model.step);
+//    printf("Steps taken: %i\n", model.step);
 }
 
 
@@ -223,24 +224,30 @@ void from_file(Model *model, int num) {
 
 
 void M_as_T(Model *model, double lower, double upper, double increment) {
-    model->T = lower;
-    int steps = (int)((upper - lower) / increment);
-    double mags[steps];
+    for (int num = 0; num < 1000; ++num) {
+        printf("Run: %i\n", num+1);
+        model->T = lower;
+        model->step = 0;
+        int steps = (int) ((upper - lower) / increment);
+        double mags[steps];
 
-    for (int i = 0; i <= steps; ++i) {
-        randomise(*model);
-        evolve(*model);
-        mags[i] = norm_mag(*model);
-        model->T += increment;
-    }
+        for (int i = 0; i <= steps; ++i) {
+            model->T = lower + (i * increment);
+            randomise(*model);
+            evolve(*model);
+            mags[i] = norm_mag(*model);
+        }
 
-    FILE *file;
-    file = fopen("mags.txt", "w");
-    fprintf(file, "T\tM\n");
-    for (int i = 0; i <= steps; ++i) {
-        fprintf(file, "%g\t%g\n", lower+(i*increment), mags[i]);
+        FILE *file;
+        char buf[10 + (int) ((num+1) / 10)];
+        sprintf(buf, "mags/%i.txt", num+1);
+        file = fopen(buf, "w");
+        fprintf(file, "T\tM\n");
+        for (int i = 0; i <= steps; ++i) {
+            fprintf(file, "%g\t%g\n", lower + (i * increment), mags[i]);
+        }
+        fclose(file);
     }
-    fclose(file);
 }
 
 
