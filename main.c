@@ -3,12 +3,11 @@
 #include <math.h>
 #include <time.h>
 
-//#define mu_b 9.274E-21
-#define mu_b 1.
+#define mu_b 9.274E-21
+//#define mu_b 1.
 #define J 1.
-#define B 0.
-//#define k_b 1.380649E-23
-#define k_b 1.
+#define k_b 1.380649E-23
+//#define k_b 1.
 
 
 typedef struct {
@@ -20,6 +19,7 @@ typedef struct {
     int step;
     int delta_checks;
     double T;
+    double B;
     unsigned char *lattice;
 } Model;
 
@@ -48,6 +48,8 @@ void from_file(Model*, int);
 
 void M_as_T(Model*, double, double, double);
 
+void M_as_B(Model*, double, double, double);
+
 void set_evolve(Model*);
 
 
@@ -60,9 +62,9 @@ int main() {
     }
     model.evolve_steps = 0;
     model.delta_checks = 20;
-    model.T = 1.5;
+    model.T = 5;
 //    set_evolve(&model);
-    M_as_T(&model, 0.5, 2.5, 0.01);
+    M_as_B(&model, 0.0, 10, 0.1);
 //    video();
     return 0;
 }
@@ -108,7 +110,7 @@ double energy(Model model) {
                 E -= (J / 2) * nn(dx, dy) * (get(model, i_x, i_y) - .5) * (get(model, j_x, j_y) - .5);
             }
         }
-        E -= mu_b * B * (get(model, i_x, i_y)-.5);
+        E -= mu_b * model.B * (get(model, i_x, i_y)-.5);
     }
     return E;
 }
@@ -243,6 +245,34 @@ void M_as_T(Model *model, double lower, double upper, double increment) {
         sprintf(buf, "mags/%i.txt", num+1);
         file = fopen(buf, "w");
         fprintf(file, "T\tM\n");
+        for (int i = 0; i <= steps; ++i) {
+            fprintf(file, "%g\t%g\n", lower + (i * increment), mags[i]);
+        }
+        fclose(file);
+    }
+}
+
+
+void M_as_B(Model *model, double lower, double upper, double increment) {
+    for (int num = 100; num < 1000; ++num) {
+        printf("Run: %i\n", num+1);
+        model->B = lower;
+        model->step = 0;
+        int steps = (int) ((upper - lower) / increment);
+        double mags[steps+1];
+
+        for (int i = 0; i <= steps; ++i) {
+            model->B = lower + (i * increment);
+            randomise(*model);
+            evolve(*model);
+            mags[i] = norm_mag(*model);
+        }
+
+        FILE *file;
+        char buf[10 + (int) ((num+1) / 10)];
+        sprintf(buf, "mags/%i.txt", num+1);
+        file = fopen(buf, "w");
+        fprintf(file, "B\tM\n");
         for (int i = 0; i <= steps; ++i) {
             fprintf(file, "%g\t%g\n", lower + (i * increment), mags[i]);
         }

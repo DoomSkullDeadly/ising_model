@@ -20,8 +20,8 @@ def animate(i):
         data = np.loadtxt(data_dir+files[j], skiprows=1)
         mags += data[:, 1]/(i+1)
     plt.ylabel("Normalised Magnetisation (A/m)")
-    plt.xlabel("Temperature (K)")
-    plt.title(f"Average Magnetisation vs Temperature, {i+1} Runs")
+    plt.xlabel("Magnetic Field Strength (T)")
+    plt.title(f"Average Magnetisation vs Magnetic Field Strenth, {i+1} Runs")
     ax.scatter(test[:, 0], mags)
     return fig,
 
