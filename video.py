@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 import os
 
-data_dir = "output/"
+data_dir = "cmake-build-debug/output/"
 
 files = os.listdir(data_dir)
 
@@ -20,5 +20,5 @@ def animate(i):
 
 ani = animation.FuncAnimation(fig, animate, frames=len(files), interval=33.333333, blit=True)
 writervideo = animation.FFMpegWriter(fps=30)
-ani.save("../test.mp4", writer=writervideo)
+ani.save("test.mp4", writer=writervideo)
 plt.close()
