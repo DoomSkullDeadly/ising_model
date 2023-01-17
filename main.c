@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 
 #define mu_b 9.274E-21 // constants
 //#define mu_b 1.
@@ -32,6 +33,7 @@ typedef struct {  // all parameters that can be changed will be stored in the st
     int size_x;
     int size_y;
     double energy;
+    double energy2;
     double mag;
     int evolve_steps;
     int step;
@@ -40,6 +42,11 @@ typedef struct {  // all parameters that can be changed will be stored in the st
     double B;
     int output;
     int randomise;
+    int threads;
+    int count;
+    pthread_mutex_t setting;
+    pthread_mutex_t counting;
+    pthread_mutex_t energying;
     unsigned char *lattice;
 } Model;
 
@@ -58,6 +65,8 @@ double norm_mag(Model*);
 
 void randomise(Model*);
 
+void *evolve_loop(void*);
+
 void evolve(Model*);
 
 void output(Model*);
@@ -75,7 +84,7 @@ void set_evolve(Model*);
 
 int main() {
     srand(time(NULL)); // random seed is set before anything happens, and only set once
-    Model model = {10, 10, 0, 0, 0, 0, 20, 1., 1., 0, 1};  // the model is initialised, apart from the lattice
+    Model model = {10, 10, 0, 0, 0, 0, 0, 20, 1., 1., 0, 1, 1, 0};  // the model is initialised, apart from the lattice
 
     int running = 1;
     double lower, upper, increment;
@@ -109,7 +118,7 @@ int main() {
                 printf("Edit Parameters:\n");
                 int edit = 1;
                 while (edit) {
-                    printf("(1) Size:\t%ix%i\n(2) Temperature:\t%gK\n(3) Magnetic Field:\t%gT\n(4) Evolution Steps:\t%i\n(5) Delta Checks:\t%i\n(6) Current Step:\t%i\n(7) Step-by-Step File Output:\t%i\n(8) Randomise:\t%i\n(0) Exit\n", model.size_x, model.size_y, model.T, model.B, model.evolve_steps, model.delta_checks, model.step, model.output, model.randomise);
+                    printf("(1) Size:\t%ix%i\n(2) Temperature:\t%gK\n(3) Magnetic Field:\t%gT\n(4) Evolution Steps:\t%i\n(5) Delta Checks:\t%i\n(6) Current Step:\t%i\n(7) Step-by-Step File Output:\t%i\n(8) Randomise:\t%i\n(9) Threads (use with caution):\t%i\n(0) Exit\n", model.size_x, model.size_y, model.T, model.B, model.evolve_steps, model.delta_checks, model.step, model.output, model.randomise, model.threads);
                     int param;
                     scanf("%i", &param);
 
@@ -161,6 +170,11 @@ int main() {
                         case 8:
                             printf("Model randomisation before running (0/1):\n");
                             scanf("%i", &model.randomise);
+                            break;
+
+                        case 9:
+                            printf("Enter number of threads for program to use:\n");
+                            scanf("%i", &model.threads);
                             break;
                     }
                 }
@@ -288,8 +302,48 @@ double norm_mag(Model *model) {
 void randomise(Model *model) { // since only individual bits are accessed, every byte can be randomised instead of setting bits
     int size = (int) (model->size_x * model->size_y / sizeof(unsigned char)) + 1;
     for (int i = 0; i < size; i++) {
-        model->lattice[i] = (char)rand() % 128;
+        model->lattice[i] = (unsigned char)rand() % 256;
     }
+}
+
+
+void *evolve_loop(void *m) {
+    Model *model = (Model *)m;
+    while (model->count > 0) {
+
+        pthread_mutex_lock(&model->counting);
+        model->count -= 1;
+        pthread_mutex_unlock(&model->counting);
+
+//        printf("%i\n", model->count);
+        int x = rand() % model->size_x + 1;
+        int y = rand() % model->size_y + 1;
+        int bit_flip = get(model, x, y);
+
+        pthread_mutex_lock(&model->setting);
+        set(model, x, y, bit_flip ? 0 : 1);
+
+        double current_E = energy(model);
+        double delta_E = current_E - model->energy;
+        pthread_mutex_unlock(&model->setting);
+
+        if (delta_E > 0 && (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * model->T))) { // set back to original
+
+            pthread_mutex_lock(&model->setting);
+            set(model, x, y, bit_flip);
+            pthread_mutex_unlock(&model->setting);
+
+        }
+        else {
+
+            pthread_mutex_lock(&model->energying);
+            model->energy = current_E;
+            pthread_mutex_unlock(&model->energying);
+
+        }
+    }
+    pthread_exit(NULL);
+    return NULL;
 }
 
 
@@ -301,21 +355,13 @@ void evolve(Model *model) {
     double d_E[model->delta_checks];
     while (running) {
         model->step++;
-        for (int i = 0; i < model->size_x * model->size_y; i++) {
-            int x = rand() % model->size_x + 1;
-            int y = rand() % model->size_y + 1;
-            int bit_flip = get(model, x, y);
-            set(model, x, y, bit_flip ? 0 : 1);
-
-            double current_E = energy(model);
-            double delta_E = current_E - model->energy;
-
-            if (delta_E > 0 && (float) (rand() % 100000) / 100000 > exp(-delta_E / (k_b * model->T))) { // set back to original
-                set(model, x, y, bit_flip);
-            }
-            else {
-                model->energy = current_E;
-            }
+        pthread_t tid[model->threads];
+        model->count = model->size_x * model->size_y;
+        for (int t = 0; t < model->threads; t++) {
+            pthread_create(&tid[t], NULL, evolve_loop, model);
+        }
+        for (int t = 0; t < model->threads; t++) {
+            pthread_join(tid[t], NULL);
         }
 
         if (model->step == // if the model is set to run for a specified amount of steps it'll stop when those are reached
@@ -332,6 +378,7 @@ void evolve(Model *model) {
             output(model);
         }
     }
+    model->step = 0;
 }
 
 
@@ -435,10 +482,10 @@ void set_evolve(Model *model) { // performs evolution once
     }
     model->energy = energy(model);
     model->mag = norm_mag(model);
-    print_arr(model);
+//    print_arr(model);
     printf("E = %g, M = %g\n", model->energy, model->mag);
     evolve(model);
-    print_arr(model);
+//    print_arr(model);
     model->energy = energy(model);
     model->mag = norm_mag(model);
     printf("E = %g, M = %g\n", model->energy, model->mag);
