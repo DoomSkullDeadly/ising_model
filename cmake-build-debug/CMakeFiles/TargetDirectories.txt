@@ -1,3 +1,0 @@
-F:/Uni Programming/small ints/cmake-build-debug/CMakeFiles/small_ints.dir
-F:/Uni Programming/small ints/cmake-build-debug/CMakeFiles/edit_cache.dir
-F:/Uni Programming/small ints/cmake-build-debug/CMakeFiles/rebuild_cache.dir
