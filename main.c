@@ -1,10 +1,5 @@
 /*
-* Assessment Final for the PHY2027 module
-* Author: Danila Astrakhantsev
-* Date: 16/12/22
-*/
-
-/*
+ * Shitty "documentation":
  * The program will let the user choose parameters for the Ising model. There are no sanitary checks.
  * It will also allow the user to choose how to run the model, either a single run from specified parameters, or many
  * runs while changing a parameter with given increments in a range.
